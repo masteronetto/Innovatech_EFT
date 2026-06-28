@@ -1,5 +1,4 @@
 # Innovatech EFT
-# InnovaTech DevOps — ISY1101
 
 Plataforma de integración y entrega continua (CI/CD) desarrollada para el curso Introducción a Herramientas DevOps (ISY1101) en DuocUC. El proyecto automatiza el ciclo completo de build, test, empaquetado y despliegue de una aplicación compuesta por un frontend React, un backend Node.js/Express y una base de datos PostgreSQL, orquestada en AWS ECS Fargate mediante GitHub Actions.
 
