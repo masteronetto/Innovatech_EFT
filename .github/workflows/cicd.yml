@@ -1,0 +1,138 @@
+name: CI/CD Pipeline - InnovaTech
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  AWS_REGION: ${{ secrets.AWS_REGION }}
+  ECR_REGISTRY: ${{ secrets.ECR_REGISTRY }}
+  ECR_REPO_FRONTEND: innovatech/frontend
+  ECR_REPO_BACKEND: innovatech/backend
+  ECS_CLUSTER: innovatech-cluster
+  ECS_SERVICE_FRONTEND: innovatech-frontend-service
+  ECS_SERVICE_BACKEND: innovatech-backend-service
+
+jobs:
+  
+  build-and-test:
+    name: Build and Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout codigo
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Test Backend
+        working-directory: ./backend
+        run: |
+          npm install
+          npm test
+
+      - name: Test Frontend
+        working-directory: ./frontend
+        run: |
+          npm install
+          npm run build
+
+  
+  build-and-push:
+    name: Build and Push to ECR
+    runs-on: ubuntu-latest
+    needs: build-and-test
+    if: github.ref == 'refs/heads/main'
+    outputs:
+      image-tag: ${{ steps.set-tag.outputs.tag }}
+
+    steps:
+      - name: Checkout codigo
+        uses: actions/checkout@v4
+
+      - name: Configurar credenciales AWS
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Login en Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Establecer tag de imagen
+        id: set-tag
+        run: echo "tag=$(echo $GITHUB_SHA | cut -c1-7)" >> $GITHUB_OUTPUT
+
+      - name: Build y Push frontend
+        run: |
+          docker build -t $ECR_REGISTRY/$ECR_REPO_FRONTEND:latest \
+                       -t $ECR_REGISTRY/$ECR_REPO_FRONTEND:${{ steps.set-tag.outputs.tag }} \
+                       ./frontend
+          docker push $ECR_REGISTRY/$ECR_REPO_FRONTEND:latest
+          docker push $ECR_REGISTRY/$ECR_REPO_FRONTEND:${{ steps.set-tag.outputs.tag }}
+
+      - name: Build y Push backend
+        run: |
+          docker build -t $ECR_REGISTRY/$ECR_REPO_BACKEND:latest \
+                       -t $ECR_REGISTRY/$ECR_REPO_BACKEND:${{ steps.set-tag.outputs.tag }} \
+                       ./backend
+          docker push $ECR_REGISTRY/$ECR_REPO_BACKEND:latest
+          docker push $ECR_REGISTRY/$ECR_REPO_BACKEND:${{ steps.set-tag.outputs.tag }}
+
+  
+  deploy:
+    name: Deploy to ECS
+    runs-on: ubuntu-latest
+    needs: build-and-push
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Checkout codigo
+        uses: actions/checkout@v4
+
+      - name: Configurar credenciales AWS
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Actualizar imagen en task definition frontend
+        id: task-def-frontend
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        with:
+          task-definition: frontend-task-definition.json
+          container-name: frontend
+          image: ${{ secrets.ECR_REGISTRY }}/innovatech/frontend:${{ needs.build-and-push.outputs.image-tag }}
+
+      - name: Deploy frontend en ECS
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v1
+        with:
+          task-definition: ${{ steps.task-def-frontend.outputs.task-definition }}
+          service: ${{ env.ECS_SERVICE_FRONTEND }}
+          cluster: ${{ env.ECS_CLUSTER }}
+          wait-for-service-stability: true
+
+      - name: Actualizar imagen en task definition backend
+        id: task-def-backend
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        with:
+          task-definition: backend-task-definition.json
+          container-name: backend
+          image: ${{ secrets.ECR_REGISTRY }}/innovatech/backend:${{ needs.build-and-push.outputs.image-tag }}
+
+      - name: Deploy backend en ECS
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v1
+        with:
+          task-definition: ${{ steps.task-def-backend.outputs.task-definition }}
+          service: ${{ env.ECS_SERVICE_BACKEND }}
+          cluster: ${{ env.ECS_CLUSTER }}
+          wait-for-service-stability: true

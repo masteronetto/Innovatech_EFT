@@ -1,0 +1,41 @@
+{
+  "family": "innovatech-backend",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "256",
+  "memory": "512",
+  "executionRoleArn": "arn:aws:iam::447578577047:role/LabRole",
+  "taskRoleArn": "arn:aws:iam::447578577047:role/LabRole",
+  "containerDefinitions": [
+    {
+      "name": "backend",
+      "image": "447578577047.dkr.ecr.us-east-1.amazonaws.com/innovatech/backend:latest",
+      "portMappings": [
+        {
+          "containerPort": 3001,
+          "protocol": "tcp"
+        }
+      ],
+      "essential": true,
+      "environment": [
+        {
+          "name": "PORT",
+          "value": "3001"
+        },
+        {
+          "name": "DATABASE_URL",
+          "value": "postgresql://innovatech:innovatech123@db:5432/innovatech_db"
+        }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/innovatech-backend",
+          "awslogs-region": "us-east-1",
+          "awslogs-stream-prefix": "ecs",
+          "awslogs-create-group": "true"
+        }
+      }
+    }
+  ]
+}
