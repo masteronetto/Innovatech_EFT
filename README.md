@@ -4,7 +4,6 @@ Plataforma de integración y entrega continua (CI/CD) desarrollada para el curso
 
 ---
 ## Integrantes
-
 - Constanza Orellana
 - Daniel Onetto
 - Corina Roa
