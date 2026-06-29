@@ -24,7 +24,7 @@
         },
         {
           "name": "DATABASE_URL",
-          "value": "postgresql://innovatech:innovatech123@db:5432/innovatech_db"
+          "value": "postgresql://innovatech:innovatech123@innovatech-db.cumblulia9ho.us-east-1.rds.amazonaws.com:5432/innovatech_db"
         }
       ],
       "logConfiguration": {

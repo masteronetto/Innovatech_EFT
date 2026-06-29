@@ -9,6 +9,16 @@ app.use(express.json());
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
+  ssl: { rejectUnauthorized: false }
+});
+
+pool.connect((err, client, release) => {
+  if (err) {
+    console.error('Error conectando a BD:', err.message);
+  } else {
+    console.log('Conectado a PostgreSQL exitosamente');
+    release();
+  }
 });
 
 app.get('/health', async (req, res) => {
@@ -16,7 +26,8 @@ app.get('/health', async (req, res) => {
     await pool.query('SELECT 1');
     res.json({ status: 'ok', service: 'innovatech-backend', db: 'connected' });
   } catch (err) {
-    res.status(500).json({ status: 'error', db: 'disconnected' });
+    console.error('Error query:', err.message);
+    res.status(500).json({ status: 'error', db: 'disconnected', detail: err.message });
   }
 });
 
