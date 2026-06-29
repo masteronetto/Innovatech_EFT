@@ -173,4 +173,22 @@ Application Load Balancer
 - `.dockerignore` en cada servicio para excluir archivos innecesarios
 
 ---
+## URLs de producción
+
+| Servicio | URL |
+|---|---|
+| Frontend | http://18.212.78.52 |
+| Backend Health | http://13.219.103.86:3001/health |
+| API Productos | http://13.219.103.86:3001/api/productos |
+
+## Infraestructura desplegada
+
+| Recurso | Detalle |
+|---|---|
+| Clúster ECS | innovatech-cluster (Fargate) |
+| Frontend Service | innovatech-frontend-service |
+| Backend Service | innovatech-backend-service |
+| Base de datos | innovatech-db (PostgreSQL 15 en RDS) |
+| Registro imágenes | Amazon ECR (innovatech/frontend, innovatech/backend) |
+| Región | us-east-1 |
 
